@@ -10,14 +10,16 @@ module GeoDataFrames
 
         function Geometry(ptr::AG.Geometry)
             geom = new(AG.unsafe_clone(ptr))
-            finalizer(geom, g -> AG.destroy(g.ptr))
+            finalizer(geom, g -> (AG.destroy(g.ptr); g.ptr = C_NULL))
             geom
         end
     end
     Base.show(io::IO, geom::Geometry) = print(io, "$(geom.ptr)")
 
-    function shape(poly::Geometry) # only for Polygons
-        ring = AG.getgeom(poly.ptr, 0) # get outermost ring
+    shape(poly::Geometry) = shape(poly.ptr) # only for Polygons
+
+    function shape(poly::AG.Geometry) # only for Polygons
+        ring = AG.getgeom(poly, 0) # get outermost ring
         npoints = AG.npoint(ring)
         Shape([(AG.getx(ring, i-1), AG.gety(ring, i-1)) for i in 1:npoints])
     end
@@ -28,9 +30,24 @@ module GeoDataFrames
         for (i,geom) in enumerate(geometries)
             DataFrames.isna(geom) && continue
             if label != :none
-                plot!(plt, shape(geom); label=df[i,label], kwargs...)
+                if AG.getgeomtype(geom.ptr) == AG.wkbMultiPolygon
+                    for j in 1:AG.ngeom(geom.ptr)
+                        plot!(plt, shape(AG.getgeom(geom.ptr, j-1));
+                              label=df[i,label], kwargs...)
+                    end
+                else
+                    @assert AG.getgeomtype(geom.ptr) == AG.wkbPolygon
+                    plot!(plt, shape(geom); label=df[i,label], kwargs...)
+                end
             else
-                plot!(plt, shape(geom); kwargs...)
+                if AG.getgeomtype(geom.ptr) == AG.wkbMultiPolygon
+                    for j in 1:AG.ngeom(geom.ptr)
+                        plot!(plt, shape(AG.getgeom(geom.ptr, j-1)); kwargs...)
+                    end
+                else
+                    @assert AG.getgeomtype(geom.ptr) == AG.wkbPolygon
+                    plot!(plt, shape(geom); kwargs...)
+                end
             end
         end
         plt
