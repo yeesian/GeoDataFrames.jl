@@ -25,28 +25,60 @@ module GeoDataFrames
     end
 
     function plot(df::DataFrame; plt = Plots.plot(bg = :black),
-                  geom::Symbol=:none, label::Symbol=:none, kwargs...)
+                  geom::Symbol=:none, label::Symbol=:none,
+                  fillvalue::Symbol = :none,
+                  colorgrad = Plots.cgrad(),
+                  kwargs...)
         geometries = (geom == :none) ? df[:geometry0] : df[geom]
+        maxfillvalue = (fillvalue == :none) ? 0 : maximum(df[fillvalue])
         for (i,geom) in enumerate(geometries)
             DataFrames.isna(geom) && continue
-            if label != :none
-                if AG.getgeomtype(geom.ptr) == AG.wkbMultiPolygon
-                    for j in 1:AG.ngeom(geom.ptr)
-                        plot!(plt, shape(AG.getgeom(geom.ptr, j-1));
-                              label=df[i,label], kwargs...)
+            if AG.getgeomtype(geom.ptr) == AG.wkbMultiPolygon
+                for j in 1:AG.ngeom(geom.ptr)
+                    if label != :none
+                        if fillvalue != :none
+                            plot!(plt, shape(AG.getgeom(geom.ptr, j-1));
+                                  label = df[i,label],
+                                  fc = colorgrad[df[i,fillvalue]/maxfillvalue],
+                                  kwargs...)
+                        else
+                            plot!(plt, shape(AG.getgeom(geom.ptr, j-1));
+                                  label = df[i,label],
+                                  kwargs...)
+                        end
+                    else
+                        if fillvalue != :none
+                            plot!(plt, shape(AG.getgeom(geom.ptr, j-1));
+                                  fc = colorgrad[df[i,fillvalue]/maxfillvalue],
+                                  kwargs...)
+                        else
+                            plot!(plt, shape(AG.getgeom(geom.ptr, j-1));
+                                  kwargs...)
+                        end
                     end
-                else
-                    @assert AG.getgeomtype(geom.ptr) == AG.wkbPolygon
-                    plot!(plt, shape(geom); label=df[i,label], kwargs...)
                 end
             else
-                if AG.getgeomtype(geom.ptr) == AG.wkbMultiPolygon
-                    for j in 1:AG.ngeom(geom.ptr)
-                        plot!(plt, shape(AG.getgeom(geom.ptr, j-1)); kwargs...)
+                @assert AG.getgeomtype(geom.ptr) == AG.wkbPolygon
+                if label != :none
+                    if fillvalue != :none
+                        plot!(plt, shape(geom);
+                              label = df[i,label],
+                              fc = colorgrad[df[i,fillvalue]/maxfillvalue],
+                              kwargs...)
+                    else
+                        plot!(plt, shape(geom);
+                              label = df[i,label],
+                              kwargs...)
                     end
                 else
-                    @assert AG.getgeomtype(geom.ptr) == AG.wkbPolygon
-                    plot!(plt, shape(geom); kwargs...)
+                    if fillvalue != :none
+                        plot!(plt, shape(geom);
+                              fc = colorgrad[df[i,fillvalue]/maxfillvalue],
+                              kwargs...)
+                    else
+                        plot!(plt, shape(geom);
+                              kwargs...)
+                    end
                 end
             end
         end
@@ -106,5 +138,5 @@ module GeoDataFrames
                 end
             end
        end
-   end
+    end
 end
