@@ -3,7 +3,7 @@ module GeoDataFrames
     isdefined(Base, :__precompile__) && __precompile__()
 
     import ArchGDAL; const AG = ArchGDAL
-    using DataFrames, Plots, SQLQuery
+    using DataFrames, Plots #, SQLQuery
 
     type Geometry
         ptr::AG.Geometry
@@ -127,16 +127,16 @@ module GeoDataFrames
         end
     end
 
-    macro query(args...)
-        AG.registerdrivers() do
-            filename = string(args[1].args[2])
-            AG.read(filename) do dataset
-                args[1].args[2] = Symbol(AG.getname(AG.getlayer(dataset, 0)))
-                sqlcommand = SQLQuery.translatesql(SQLQuery._sqlquery(args))
-                AG.executesql(dataset, sqlcommand, dialect="SQLite") do results
-                    geodataframe(results)
-                end
-            end
-       end
-    end
+    # macro query(args...)
+    #     AG.registerdrivers() do
+    #         filename = string(args[1].args[2])
+    #         AG.read(filename) do dataset
+    #             args[1].args[2] = Symbol(AG.getname(AG.getlayer(dataset, 0)))
+    #             sqlcommand = SQLQuery.translatesql(SQLQuery._sqlquery(args))
+    #             AG.executesql(dataset, sqlcommand, dialect="SQLite") do results
+    #                 geodataframe(results)
+    #             end
+    #         end
+    #    end
+    # end
 end
