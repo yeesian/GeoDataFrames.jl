@@ -10,7 +10,8 @@ module GeoDataFrames
     the geometry column (if any) defaults to `geometry0`.
     """
     function geodataframe(layer::AG.FeatureLayer)
-        DataStreams.Data.stream!(AG.Source(layer), DataFrames.DataFrame)
+        sink = DataStreams.Data.stream!(AG.Source(layer), DataFrames.DataFrame)
+        DataStreams.Data.close!(sink)
     end
 
     """
